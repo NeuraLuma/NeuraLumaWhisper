@@ -64,21 +64,27 @@ TODO
 ### Linux (GPU)
 ```sh
 conda env create -f environmentGPU.yaml
-conda activate NeuraLumaWhisper
+conda activate NeuraLumaWhisperGPU
 ```
 ### Linux (TPU)
 TODO
 
-### MacOS (Apple Silicon)
+### MacOS (Apple Silicon) - Currently not working
 Note: As JAX has to be installed and built from Source to be supported with Apple Silicon it takes a while. The Implementation is also Experimental and may cause unexpected behaviour.
 
+**Currently jax-metal does not support `mhlo.convolution` which is used in the jax implementation**
+
 ```sh
-chmod +x ./installOSX.sh
-./installOSX.sh
-conda activate NeuraLumaWhisper
+chmod +x ./installOSX_Silicon.sh
+./installOSX_Silicon.sh
+conda activate NeuraLumaWhisperSilicon
 ```
+
 ### MacOS / Linux (CPU)
-TODO
+```sh
+conda env create -f environmentCPU.yaml
+conda activate NeuraLumaWhisperCPU
+```
 
 ### Windows (GPU)
 TODO

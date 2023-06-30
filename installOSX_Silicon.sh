@@ -2,8 +2,8 @@
 
 # Install dependencies from yaml
 source ~/.bash_profile
-conda env create -f environmentOSX.yaml
-conda activate NeuraLumaWhisper
+conda env create -f environmentOSX_Silicon.yaml
+conda activate NeuraLumaWhisperSilicon
 # See Apple Instructions: https://developer.apple.com/metal/jax/
 # Install JAX from source
 git clone https://github.com/google/jax.git --branch jaxlib-v0.4.10 --single-branch

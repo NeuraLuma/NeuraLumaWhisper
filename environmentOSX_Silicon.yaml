@@ -1,4 +1,4 @@
-name: NeuraLumaWhisper
+name: NeuraLumaWhisperSilicon
 channels:
   - defaults
   - conda-forge
