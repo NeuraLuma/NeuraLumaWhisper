@@ -6,6 +6,7 @@ dependencies:
   - nvidia
   - python==3.10
   - pip
+  - ffmpeg
   - jaxlib=*=*cuda*
   - jax==3.4.11
   - cuda-nvcc
@@ -13,3 +14,7 @@ dependencies:
     - git+https://github.com/sanchit-gandhi/whisper-jax.git
     - gradio==3.35.2
     - transformers==4.30.0
+    - cached_property==1.5.2
+    #- pytube==15.0.0
+    - git+https://github.com/flywiththetide/pytube.git # Currently contains a fix for pytube regex
+    - moviepy==1.0.3

@@ -1,9 +1,11 @@
 name: NeuraLumaWhisper
 channels:
   - defaults
+  - conda-forge
 dependencies:
   - python==3.10
   - pip
+  - ffmpeg
   # Installation of JAX and the Metal Plugin are handled in sh script.
   - pip:
     - numpy
@@ -11,3 +13,7 @@ dependencies:
     - git+https://github.com/sanchit-gandhi/whisper-jax.git
     - gradio==3.35.2
     - transformers==4.30.0
+    - cached_property==1.5.2
+    #- pytube==15.0.0
+    - git+https://github.com/flywiththetide/pytube.git # Currently contains a fix for pytube regex
+    - moviepy==1.0.3
