@@ -1,0 +1,15 @@
+name: NeuraLumaWhisper
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - nvidia
+  - python==3.10
+  - pip
+  - jaxlib=*=*cuda*
+  - jax==3.4.11
+  - cuda-nvcc
+  - pip:
+    - git+https://github.com/sanchit-gandhi/whisper-jax.git
+    - gradio==3.35.2
+    - transformers==4.30.0

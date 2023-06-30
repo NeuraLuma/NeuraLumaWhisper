@@ -1,0 +1,13 @@
+name: NeuraLumaWhisper
+channels:
+  - defaults
+dependencies:
+  - python==3.10
+  - pip
+  # Installation of JAX and the Metal Plugin are handled in sh script.
+  - pip:
+    - numpy
+    - wheel
+    - git+https://github.com/sanchit-gandhi/whisper-jax.git
+    - gradio==3.35.2
+    - transformers==4.30.0
