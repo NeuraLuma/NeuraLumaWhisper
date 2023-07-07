@@ -18,7 +18,7 @@ Please make sure to have Conda / Miniconda installed. We recommend using [Minico
 ```sh
 wget -c https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 chmod +x ./Miniconda3-latest-Linux-x86_64.sh
-./Miniconda3-latest-Linux-x86_64.sh -b
+./Miniconda3-latest-Linux-x86_64.sh 
 source ~/.bashrc
 conda config --set auto_activate_base false
 conda deactivate
@@ -28,7 +28,7 @@ conda deactivate
 ```sh
 wget -c https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-aarch64.sh
 chmod +x ./Miniconda3-latest-Linux-aarch64.sh
-./Miniconda3-latest-Linux-aarch64.sh -b
+./Miniconda3-latest-Linux-aarch64.sh 
 source ~/.bashrc
 conda config --set auto_activate_base false
 conda deactivate
@@ -39,7 +39,7 @@ Make sure commandline Tools are installed: `xcode-select --install`
 ```sh
 curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh
 chmod +x ./Miniconda3-latest-MacOSX-arm64.sh
-./Miniconda3-latest-MacOSX-arm64.sh -b
+./Miniconda3-latest-MacOSX-arm64.sh 
 source ~/.bashrc
 conda config --set auto_activate_base false
 conda deactivate
@@ -50,7 +50,7 @@ Make sure commandline Tools are installed: `xcode-select --install`
 ```sh
 curl -O https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
 chmod +x ./Miniconda3-latest-MacOSX-x86_64.sh
-./Miniconda3-latest-MacOSX-x86_64.sh -b
+./Miniconda3-latest-MacOSX-x86_64.sh 
 source ~/.bashrc
 conda config --set auto_activate_base false
 conda deactivate
