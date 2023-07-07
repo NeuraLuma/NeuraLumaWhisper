@@ -1,7 +1,10 @@
 from whisper_jax import FlaxWhisperPipline
 import jax.numpy as jnp
 
-class Whisper:
+class WhisperModel:
+    """
+    The Whisper Model to interact with Whisper.
+    """
     def __init__(self, dtype=jnp.float16, batch_size=1, checkpoint="openai/whisper-large-v2"):
         self.pipeline = FlaxWhisperPipline(checkpoint, batch_size=batch_size, dtype=dtype)
     
@@ -34,4 +37,3 @@ class Whisper:
         text = self.pipeline(file_path, task="translate", return_timestamps=add_timestamps)
 
         return text
-    
