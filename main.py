@@ -5,6 +5,7 @@ import os
 import argparse
 
 class CLI:
+    # ToDo: Add WhisperModel Options to constructor, add audio_converter to constructor
     def is_directory_or_file(self, path):
         if path is None:
             return None
@@ -206,6 +207,9 @@ if __name__ == "__main__":
     parser.add_argument('-tl', '--translate', help='Sets the mode to translation', action='store_true')
     # ToDo: Add Option to create HuggingFace Dataset
     # ToDo: Add Option to push to HuggingFace Hub
+    # ToDo: Add Option to specify dtype for inference
+    # ToDo: Add Option to specify batch_size for inference
+    # ToDo: Add Option to specify alternative model
     
     args = parser.parse_args()
     source_path = args.source
