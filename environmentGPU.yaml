@@ -3,12 +3,11 @@ channels:
   - conda-forge
   - nvidia
 dependencies:
-  - nvidia
   - python==3.10
   - pip
   - ffmpeg
   - jaxlib=*=*cuda*
-  - jax==3.4.11
+  - jax==0.4.11
   - cuda-nvcc
   - pip:
     - git+https://github.com/sanchit-gandhi/whisper-jax.git
