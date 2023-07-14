@@ -3,9 +3,15 @@ from core.model import WhisperModel
 from core.converter import AudioConverter
 import os
 import argparse
+import jax.numpy as jnp
 
+# ToDo: Refactoring, less clutter and better type hints
+# ToDo: Generalize this class so WebUI can use it easily
 class CLI:
-    # ToDo: Add WhisperModel Options to constructor, add audio_converter to constructor
+    def __init__(self, dtype=jnp.float16, batch_size=1, hf_checkpoint='openai/whisper-large-v2'):
+        self.audio_converter = AudioConverter()
+        self.whisper_model = WhisperModel(dtype=dtype, batch_size=batch_size, checkpoint=hf_checkpoint)
+    # ToDo: Move to utility class
     def is_directory_or_file(self, path):
         if path is None:
             return None
@@ -14,6 +20,7 @@ class CLI:
         elif os.path.isfile(path):
             return "file"
 
+    # ToDo: Move to utility class
     def is_audio_or_video(self, file_path):
         _, file = os.path.split(file_path)
         file_type = file.split(".")[-1]
@@ -26,8 +33,6 @@ class CLI:
             return None
 
     def transcribe(self, source_path_mode, source_path, output_path, youtube_urls=[], add_timestamps=False, translate=False):
-        audio_converter = AudioConverter()
-
         source_path_type = self.is_directory_or_file(source_path)
 
         if source_path_type is None and len(youtube_urls) <= 0:
@@ -43,17 +48,12 @@ class CLI:
             self.transcribe_youtube(youtube_urls=youtube_urls, output_path=output_path, add_timestamps=add_timestamps, translate=translate)
 
     def transcribe_youtube(self, youtube_urls, output_path, add_timestamps=False, translate=False):
-        audio_converter = AudioConverter()
-
-        converted_paths, _ = audio_converter.convert_multiple_from_youtube(urls=youtube_urls)
+        converted_paths, _ = self.audio_converter.convert_multiple_from_youtube(urls=youtube_urls)
 
         for path in converted_paths:
             self.transcribe_file(source_dir=os.path.dirname(path), source_file=os.path.basename(path), output_path=output_path, add_timestamps=add_timestamps, translate=translate)
 
     def transcribe_file(self, source_dir, source_file, output_path, add_timestamps=False, translate=False):
-        whisper_model = WhisperModel()
-        audio_converter = AudioConverter()
-
         file_path = os.path.join(source_dir, source_file)
 
         # Transcription logic for a single file
@@ -61,16 +61,16 @@ class CLI:
         if file_type == 'audio':
             source_audio_file_path = file_path
         elif file_type == 'video':
-            source_audio_file_path = audio_converter.convert_from_video(input_path=source_dir, input_file_name=source_file, output_path=output_path)
+            source_audio_file_path = self.audio_converter.convert_from_video(input_path=source_dir, input_file_name=source_file, output_path=output_path)
         else:
             raise Exception("Unknown file type provided.")
         
         transcription = {}
 
         if not translate:
-            transcription = whisper_model.transcribe(file_path=source_audio_file_path, add_timestamps=add_timestamps)
+            transcription = self.whisper_model.transcribe(file_path=source_audio_file_path, add_timestamps=add_timestamps)
         else:
-            transcription = whisper_model.translate(file_path=source_audio_file_path, add_timestamps=add_timestamps)
+            transcription = self.whisper_model.translate(file_path=source_audio_file_path, add_timestamps=add_timestamps)
         
         print(transcription)
 
@@ -84,7 +84,7 @@ class CLI:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         
-        with open(os.path.join(output_path, base_output_filename), 'w') as f:
+        with open(os.path.join(output_path, base_output_filename + ".txt"), 'w') as f:
             f.write(transcription['text'])
         
         if add_timestamps:
@@ -110,8 +110,6 @@ class CLI:
 
     def transcribe_dir(self, source_dir, output_path, add_timestamps=False, translate=False):
         # ToDo: Cleanup temp files (conversions, downloads)
-        whisper_model = WhisperModel()
-        audio_converter = AudioConverter()
 
         files = self.collect_files_recursively(source_dir)
 
@@ -130,18 +128,18 @@ class CLI:
 
         for audio_file in audio_files:
             if not translate:
-                transcriptions[audio_file] = whisper_model.transcribe(audio_file, add_timestamps=add_timestamps)
+                transcriptions[audio_file] = self.whisper_model.transcribe(audio_file, add_timestamps=add_timestamps)
             else:
-                transcriptions[audio_file] = whisper_model.translate(audio_file, add_timestamps=add_timestamps)
+                transcriptions[audio_file] = self.whisper_model.translate(audio_file, add_timestamps=add_timestamps)
         
         if len(video_files) > 0:
-            video_audio_files = audio_converter.convert_multiple_from_videos(input_source_paths=video_files)
+            video_audio_files = self.audio_converter.convert_multiple_from_videos(input_source_paths=video_files)
 
             for video_audio_file in video_audio_files:
                 if not translate:
-                    transcriptions[video_audio_file] = whisper_model.transcribe(video_audio_file, add_timestamps=add_timestamps)
+                    transcriptions[video_audio_file] = self.whisper_model.transcribe(video_audio_file, add_timestamps=add_timestamps)
                 else:
-                    transcriptions[video_audio_file] = whisper_model.translate(video_audio_file, add_timestamps=add_timestamps)
+                    transcriptions[video_audio_file] = self.whisper_model.translate(video_audio_file, add_timestamps=add_timestamps)
         
         print(transcriptions)
 
@@ -205,11 +203,13 @@ if __name__ == "__main__":
     parser.add_argument('-o', '--output', help='Path to the directory for the transcribed files', required=True)
     parser.add_argument('-ts', '--timestamp', help='Activates timestamps. Adds a seperate file with sbv extension', action='store_true')
     parser.add_argument('-tl', '--translate', help='Sets the mode to translation', action='store_true')
+    parser.add_argument('-d', '--dtype', help='Sets the dtype to use', default='float16', choices=['float16', 'bfloat16', 'float32', 'float64'])
+    parser.add_argument('-b', '--batch_size', help='Sets the batch size for inference', default=1, type=int)
+    parser.add_argument('-hfc', '--hf_checkpoint', help='Sets the hf checkpoint to use', default='openai/whisper-large-v2')
     # ToDo: Add Option to create HuggingFace Dataset
     # ToDo: Add Option to push to HuggingFace Hub
-    # ToDo: Add Option to specify dtype for inference
-    # ToDo: Add Option to specify batch_size for inference
-    # ToDo: Add Option to specify alternative model
+    # ToDo: Do some temp post-cleanup
+    # ToDo: Add name scheming option (single file = name_scheme, multiple files = name_scheme_idx, name_scheme => base_filename)
     
     args = parser.parse_args()
     source_path = args.source
@@ -217,6 +217,9 @@ if __name__ == "__main__":
     youtube = args.youtube
     add_timestamps = args.timestamp
     translate = args.translate
+    dtype = args.dtype
+    batch_size = args.batch_size
+    hf_checkpoint = args.hf_checkpoint
 
     if not youtube and not source_path:
         raise Exception("Please specify either -y --youtube and/or -s --source")
@@ -224,7 +227,7 @@ if __name__ == "__main__":
     if youtube is None:
         youtube = ""
 
-    cli = CLI()
+    cli = CLI(dtype=getattr(jnp, dtype), batch_size=batch_size, hf_checkpoint=hf_checkpoint)
 
     youtube_urls = youtube.split(";")
 
