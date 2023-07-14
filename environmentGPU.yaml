@@ -17,3 +17,5 @@ dependencies:
     #- pytube==15.0.0
     - git+https://github.com/flywiththetide/pytube.git # Currently contains a fix for pytube regex
     - moviepy==1.0.3
+    - datasets[audio]==2.13.1
+    - huggingface_hub

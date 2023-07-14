@@ -23,7 +23,7 @@ This repository aims to give an easy way of running Whisper with the following F
 - [ ] Add Post cleanup options (delete temp folder)
 - [ ] Add more verbose logging / progress (CLI)
 - [ ] Add name scheming option (output filename)
-- [ ] Support to load HF Datasets (Select two columns)
+- [x] Support to load HF Datasets (Select one audio column, revision, split)
 - [ ] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
 - [x] GPU instructions
 - [x] CPU instructions
@@ -116,6 +116,49 @@ TODO
 
 ## Usage
 TODO
+
+### Basic Options
+e.g. Timestamp, Translate, Output path TODO
+
+### Loading Audio / Video File(s) from a path
+TODO
+
+### Loading one or multiple YouTube videos
+TODO
+
+### Loading a Audio Huggingface Dataset
+When accessing private datasets, make sure to login with your huggingface account via `huggingface-cli login` and paste your auth token.
+If you do not have one, create one [here](https://huggingface.co/settings/tokens).
+
+You can use the `-ld` or `TODO` argument to load a huggingface audio dataset.
+
+Here is an example how to load a dataset from the user `myuser` with the name `my_dataset`:
+```sh
+python main.py -ld "myuser/my_dataset" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+If your datasets have splits you can add the name to load via the `-ldsp` or `TODO` argument e.g. `train`:
+```sh
+python main.py -ld "myuser/my_dataset" -ldsp "train" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+The default revision / branch to load is set to `main`, however you can change that with the `-ldr` or `TODO` argument e.g. `trunk`:
+```sh
+python main.py -ld "myuser/my_dataset" -ldsp "train" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+The default column name is set to `audio`, if it's different you can change it with the `-ldc` or `TODO` argument e.g. `some_audio`:
+```sh
+python main.py -ld "myuser/my_dataset" -ldsp "train" -ldc "some_audio" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+Selecting subsets is also supported. Let's say you have subsets for different locales, e.g. `en-GB`. You can select it using the `-ldst` or `--hf_load_dataset_subset` argument:
+```sh
+python main.py -ld "myuser/my_dataset" -ldsp "train" -ldc "some_audio" -ldst "en-GB" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+### Advanced Model Options
+e.g. batchsize, dtype, other checkpoint TODO
 
 ## License
 Please refer to the License file of this repository.
