@@ -1,15 +1,32 @@
 # NeuraLuma Whisper
 This repository aims to give an easy way of running Whisper with the following Features:
-- TODO: Transcribe multiple Audio Files
-  - TODO: Multiple formats
-- TODO: Transcribe multiple YouTube URLs
-- TODO: Transcribe Videos (convert to Audio First)
-- TODO: Create text files
-- TODO: Create caption files
-- TODO: Annotate Videos with captions
-- TODO: Create a Huggingface Dataset with upload functionality
-- TODO: Offers a CLI
-- TODO: Offers a UI
+- Transcribe one or multiple Files (.mp3, .mp4)
+- Transcribe one or multiple YouTube videos by URLs*
+- As plain Text or optionaly as timestamped .sbv
+- Usable as a CLI
+
+*Please refer to the YouTube ToS. When using this feature, you aknowledge that you have the rights to do so.
+
+## ToDos
+- [x] Transcribe Audio File(s)
+- [x] Transcribe Video File(s)
+- [x] Transcribe YouTube videos with URLs
+- [x] Plain Text Transcription
+- [x] Transcription with Timestamps (.sbv)
+- [x] CLI
+- [ ] WebUI
+- [ ] Accept More Formats (Audio and Video Formats)
+- [ ] Fine-tuned control over used dtype in JAX
+- [ ] Better Error handling (e.g. YouTube)
+- [ ] Support for batch-size
+- [ ] Support to load HF Datasets (Select two columns)
+- [ ] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
+- [x] GPU instructions
+- [x] CPU instructions
+- [ ] TPU instructions
+- [ ] Apple Silicon (Metal support)
+- [ ] Better Documentation
+- [ ] Installation Instructions for Windows
 
 ## Prerequisites
 Please make sure to have Conda / Miniconda installed. We recommend using [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
@@ -92,7 +109,7 @@ TODO
 ### Windows (CPU)
 TODO
 
-## Useage
+## Usage
 TODO
 
 ## License
