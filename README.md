@@ -24,7 +24,7 @@ This repository aims to give an easy way of running Whisper with the following F
 - [ ] Add more verbose logging / progress (CLI)
 - [ ] Add name scheming option (output filename)
 - [x] Support to load HF Datasets (Select one audio column, revision, split)
-- [ ] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
+- [x] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
 - [x] GPU instructions
 - [x] CPU instructions
 - [ ] TPU instructions
@@ -126,7 +126,7 @@ TODO
 ### Loading one or multiple YouTube videos
 TODO
 
-### Loading a Audio Huggingface Dataset
+### Loading an Audio Huggingface Dataset
 When accessing private datasets, make sure to login with your huggingface account via `huggingface-cli login` and paste your auth token.
 If you do not have one, create one [here](https://huggingface.co/settings/tokens).
 
@@ -155,6 +155,37 @@ python main.py -ld "myuser/my_dataset" -ldsp "train" -ldc "some_audio" -o /Users
 Selecting subsets is also supported. Let's say you have subsets for different locales, e.g. `en-GB`. You can select it using the `-ldst` or `--hf_load_dataset_subset` argument:
 ```sh
 python main.py -ld "myuser/my_dataset" -ldsp "train" -ldc "some_audio" -ldst "en-GB" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
+```
+
+### Saving transcriptions as an Audio / Text Huggingface Dataset
+When trying to push to HuggingfaceHub, make sure to login with your huggingface account via `huggingface-cli login` and paste your auth token.
+If you do not have one, create one [here](https://huggingface.co/settings/tokens).
+
+To create a audio to text dataset you simply have to supply a repository path of the huggingface repository that follows the `user/name` namespace. Here is an Example to push to `example_user`'s `example` Dataset using the `-sd` or `--hf_save_dataset` argument:
+
+```sh
+python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example"
+```
+
+Repositories are private by default, you can change that by using `-sp` or `--hf_save_dataset_private`:
+```sh
+python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sp False
+```
+
+You can also adjust the column names for the input audio (default `audio`), the output text transcription (default `text`) and the output text transcription with timestamps (default `sbv`) by using these arguments:
+
+- `-sdca` or `--hf_save_dataset_column_audio` for the column name of the input audio
+- `-sdct` or `--hf_save_dataset_column_text` for the column name of the transcribed text
+- `-sdcsbv` or `--hf_save_dataset_column_text_sbv` for the column name of the transcribed text with timestamps in sbv formatting
+
+e.g. setting the audio column name to `audio_in`, the text column name to `transcription_plain` and the timestamped text to `transcription_timestamped`:
+```sh
+python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sdca "audio_in" -sdct "transcription_plain" -sdcsbv "transcription_timestamped"
+```
+
+Also you may change the revision / branch name on huggingface by specifying `-sdr` or `--hf_save_dataset_revision` e.g. to `trunk`:
+```sh
+python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sdr "trunk"
 ```
 
 ### Advanced Model Options
