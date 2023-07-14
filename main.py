@@ -74,7 +74,7 @@ class CLI:
         
         print(transcription)
 
-        base_output_filename =  os.path.basename(file_path)
+        base_output_filename =  os.path.basename(file_path).split(".")[0]
 
         if not translate:
             base_output_filename += ".transcription"
@@ -150,7 +150,7 @@ class CLI:
 
         for file_path, transcription_content in transcriptions.items():
              # Extract the base filename from the path
-            base_filename = os.path.basename(file_path)
+            base_filename = os.path.basename(file_path).split(".")[0]
 
             print(transcription_content)
             # Get file name
