@@ -16,9 +16,13 @@ This repository aims to give an easy way of running Whisper with the following F
 - [x] CLI
 - [ ] WebUI
 - [ ] Accept More Formats (Audio and Video Formats)
-- [ ] Fine-tuned control over used dtype in JAX
+- [x] Fine-tuned control over used dtype in JAX
 - [ ] Better Error handling (e.g. YouTube)
-- [ ] Support for batch-size
+- [x] Support for batch-size
+- [x] Support for alternative HuggingFace Checkpoints
+- [ ] Add Post cleanup options (delete temp folder)
+- [ ] Add more verbose logging / progress (CLI)
+- [ ] Add name scheming option (output filename)
 - [ ] Support to load HF Datasets (Select two columns)
 - [ ] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
 - [x] GPU instructions
@@ -30,6 +34,7 @@ This repository aims to give an easy way of running Whisper with the following F
 
 ## Prerequisites
 Please make sure to have Conda / Miniconda installed. We recommend using [Miniconda](https://docs.conda.io/en/latest/miniconda.html).
+Alternatively, you can install the dependencies using another environment or directly (this documentation only supports Conda).
 
 ### Installation on Linux (64bit):
 ```sh
