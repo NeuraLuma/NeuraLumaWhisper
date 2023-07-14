@@ -108,7 +108,7 @@ class AudioConverter:
         
         if output_file_names is None:
             for idx, input_source_path in enumerate(input_source_paths):
-                output_file_name = os.path.join(output_path, 'audio_' + str(idx) + '.mp3')
+                output_file_name = 'audio_' + str(idx) + '.mp3'
                 output_destination_paths.append(os.path.join(output_path, output_file_name))
         else:
             for output_file_name in output_file_names:

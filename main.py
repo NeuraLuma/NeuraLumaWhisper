@@ -133,7 +133,9 @@ class CLI:
                 transcriptions[audio_file] = self.whisper_model.translate(audio_file, add_timestamps=add_timestamps)
         
         if len(video_files) > 0:
-            video_audio_files = self.audio_converter.convert_multiple_from_videos(input_source_paths=video_files)
+            # Files with the same name in nested directory could cause an error
+            output_file_names = [os.path.basename(video_file_path).split(".")[0] + ".mp3" for video_file_path in video_files]
+            video_audio_files = self.audio_converter.convert_multiple_from_videos(input_source_paths=video_files, output_file_names=output_file_names)
 
             for video_audio_file in video_audio_files:
                 if not translate:
@@ -210,6 +212,7 @@ if __name__ == "__main__":
     # ToDo: Add Option to push to HuggingFace Hub
     # ToDo: Do some temp post-cleanup
     # ToDo: Add name scheming option (single file = name_scheme, multiple files = name_scheme_idx, name_scheme => base_filename)
+    # ToDo: Add more verbose logging / progress
     
     args = parser.parse_args()
     source_path = args.source
