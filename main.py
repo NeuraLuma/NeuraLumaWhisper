@@ -96,5 +96,13 @@ if __name__ == "__main__":
 
     youtube_urls = youtube.split(";")
 
-    whisper_pipeline.transcribe(source_path=source_path, output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, youtube_urls=youtube_urls, add_timestamps=add_timestamps, translate=translate)
+    progress_cb = lambda x: print(x)
+
+    whisper_pipeline.transcribe(source_path=source_path, 
+                                output_path=output_path, 
+                                hf_save_dataset_options=hf_save_dataset_options, 
+                                youtube_urls=youtube_urls, 
+                                add_timestamps=add_timestamps, 
+                                translate=translate,
+                                progress_cb=progress_cb)
     
