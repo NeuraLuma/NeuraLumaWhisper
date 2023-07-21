@@ -57,6 +57,7 @@ with gr.Blocks() as iface:
                                                                   interactive=True, value="sbv")
                 
             submit_button = gr.Button("Transcribe", variant="primary")
+            output = gr.Text(label="Information", interactive=False)
             
     with gr.Tab(label="Model Options"):
         with gr.Row():
@@ -90,8 +91,6 @@ with gr.Blocks() as iface:
                             Only necessary if not authenticated already via huggingface-cli login""", 
                             type="password",
                             interactive=True)
-    
-    output = gr.Text(label="Information", interactive=False)
 
     def sanitize_args_decorator(function_to_decorate):
         def sanitize(arg):
