@@ -4,6 +4,7 @@ This repository aims to give an easy way of running Whisper with the following F
 - Transcribe one or multiple YouTube videos by URLs*
 - As plain Text or optionaly as timestamped .sbv
 - Usable as a CLI
+- Supports loading and saving Huggingface Datasets from and to hub
 
 *Please refer to the YouTube ToS. When using this feature, you aknowledge that you have the rights to do so.
 
@@ -25,6 +26,7 @@ This repository aims to give an easy way of running Whisper with the following F
 - [ ] Add name scheming option (output filename)
 - [x] Support to load HF Datasets (Select one audio column, revision, split)
 - [x] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
+- [ ] Support to optionally push to hub and load/save from local
 - [x] GPU instructions
 - [x] CPU instructions
 - [ ] TPU instructions
