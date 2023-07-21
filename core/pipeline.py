@@ -9,22 +9,32 @@ from datasets import load_dataset, Dataset, Audio
 # ToDo: Make return values also be returnable directly so it can be used in workflows
 # ToDo: Accept other audio and video formats
 class NeuraLumaWhisperPipeline:
-    def __init__(self, dtype=jnp.float16, batch_size=1, hf_checkpoint='openai/whisper-large-v2', hf_load_dataset_options=None):
+    def __init__(
+            self, 
+            dtype=jnp.float16, 
+            batch_size=1, 
+            hf_checkpoint='openai/whisper-large-v2', 
+            hf_load_dataset_options=None, 
+            progress_cb=lambda: None,
+            hf_token = None
+            ):
         self.audio_converter = AudioConverter()
         self.whisper_model = WhisperModel(dtype=dtype, batch_size=batch_size, checkpoint=hf_checkpoint)
         self.audio_data_entries = None
+        self.progress_cb = progress_cb # Callback used to track progress e.g. CLI print to stdout or gradio app with gr.Progress()
+        self.hf_token = hf_token
 
         # ToDo: Check if subsets work properly
         # ToDo: Check whether local datasets work as well
         if hf_load_dataset_options:
+            self.progress_cb("Loading dataset")
             loaded_dataset = load_dataset(
                 path=hf_load_dataset_options["source"], 
                 name=hf_load_dataset_options["subset"],
                 revision=hf_load_dataset_options["revision"], 
-                split=hf_load_dataset_options["split"]
+                split=hf_load_dataset_options["split"],
+                use_auth_token=self.hf_token
                 )
-            
-            print(loaded_dataset)
             
             # ToDo: If an error occurs here it might be due to: wrong column name, wrong split. wrong subset. add warning here
             self.audio_data_entries = [audio_data_entry[hf_load_dataset_options["audio_column"]] for audio_data_entry in loaded_dataset]
@@ -70,10 +80,10 @@ class NeuraLumaWhisperPipeline:
         
         # ToDo: Make this conditional, perhaps but this in another command
         if cleanup:
-            print("Cleaning up and removing temp folder")
+            self.progress_cb("Cleaning up and removing temp folder")
             if os.path.exists('temp'):
                 shutil.rmtree('temp')
-            print("Done!")
+            self.progress_cb("Done!")
     def get_timestamped_sbv_text(self, transcription):
         output = []
         for chunk in transcription['chunks']:
@@ -94,7 +104,7 @@ class NeuraLumaWhisperPipeline:
                 # Write the timestamp and text to the file
                 output.append((f"{start_time_sbv},{end_time_sbv}\n{text}"))
             except:
-                print("Error at chunk, skipping sbv timestamp")
+                self.progress_cb("Error at chunk, skipping sbv timestamp")
         
         return "\n\n".join(output)
     
@@ -144,19 +154,19 @@ class NeuraLumaWhisperPipeline:
         private = hf_save_dataset_options["private"]
 
         # ToDo: Make this conditional, return value might be desired to be the dataset itself or save to file
-        hf_dataset.push_to_hub(target_repository, split=split, branch=revision, private=private)
+        hf_dataset.push_to_hub(target_repository, split=split, branch=revision, private=private, token=self.hf_token)
 
     def transcribe_raw_audio(self, data_entries, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
         transcriptions = []
         for idx, data_entry in enumerate(data_entries):
             if not translate:
-                print(f"Transcribing audio file {idx+1} of {len(data_entries)}")
+                self.progress_cb(f"Transcribing audio file {idx+1} of {len(data_entries)}")
                 transcription = self.whisper_model.transcribe(inputs=data_entry, add_timestamps=add_timestamps)
-                print("Done!")
+                self.progress_cb("Done!")
             else:
-                print(f"Translating audio file {idx+1} of {len(data_entries)}")
+                self.progress_cb(f"Translating audio file {idx+1} of {len(data_entries)}")
                 transcription = self.whisper_model.translate(inputs=data_entry, add_timestamps=add_timestamps)
-                print("Done!")
+                self.progress_cb("Done!")
             transcriptions.append(transcription)
         
         # ToDo: This code is duplicated, it should be refactored in a way that can be reused and allows hf_datasets as well
@@ -172,7 +182,7 @@ class NeuraLumaWhisperPipeline:
         converted_paths, _ = self.audio_converter.convert_multiple_from_youtube(urls=youtube_urls)
 
         for path in converted_paths:
-            print(f"Transcribing audio file sourced from YouTube {path}")
+            self.progress_cb(f"Transcribing audio file sourced from YouTube {path}")
             self.transcribe_file(source_dir=os.path.dirname(path), source_file=os.path.basename(path), output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
 
     def transcribe_file(self, source_dir, source_file, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
@@ -190,15 +200,13 @@ class NeuraLumaWhisperPipeline:
         transcription = {}
 
         if not translate:
-            print(f"Transcribing {file_type} file {source_file}")
+            self.progress_cb(f"Transcribing {file_type} file {source_file}")
             transcription = self.whisper_model.transcribe(inputs=source_audio_file_path, add_timestamps=add_timestamps)
-            print("Done!")
+            self.progress_cb("Done!")
         else:
-            print(f"Translating {file_type} file {source_file}")
+            self.progress_cb(f"Translating {file_type} file {source_file}")
             transcription = self.whisper_model.translate(inputs=source_audio_file_path, add_timestamps=add_timestamps)
-            print("Done!")
-        
-        print(transcription)
+            self.progress_cb("Done!")
 
         base_output_filename = os.path.basename(file_path).split(".")[0]
 
@@ -213,8 +221,6 @@ class NeuraLumaWhisperPipeline:
         # ToDo: Cleanup temp files (conversions, downloads)
 
         files = self.collect_files_recursively(source_dir)
-
-        print(files)
 
         audio_files = []
         video_files = []
@@ -240,15 +246,13 @@ class NeuraLumaWhisperPipeline:
 
             for video_audio_file in video_audio_files:
                 if not translate:
-                    print(f"Transcribing {file_type} file {video_audio_file}")
+                    self.progress_cb(f"Transcribing {file_type} file {video_audio_file}")
                     transcriptions[video_audio_file] = self.whisper_model.transcribe(video_audio_file, add_timestamps=add_timestamps)
-                    print("Done!")
+                    self.progress_cb("Done!")
                 else:
-                    print(f"Translating {file_type} file {video_audio_file}")
+                    self.progress_cb(f"Translating {file_type} file {video_audio_file}")
                     transcriptions[video_audio_file] = self.whisper_model.translate(video_audio_file, add_timestamps=add_timestamps)
-                    print("Done!")
-        
-        print(transcriptions)
+                    self.progress_cb("Done!")
 
         if not os.path.exists(output_path):
             os.makedirs(output_path)
@@ -258,7 +262,6 @@ class NeuraLumaWhisperPipeline:
                 # Extract the base filename from the path
                 base_filename = os.path.basename(file_path).split(".")[0]
 
-                print(transcription_content)
                 self.write_transcription_to_file(transcription=transcription_content, base_ouput_filename=base_filename, output_path=output_path, translate=translate, add_timestamps=add_timestamps)
         
         if hf_save_dataset_options:
@@ -268,14 +271,9 @@ class NeuraLumaWhisperPipeline:
         file_paths = []
 
         for path in os.listdir(source_dir):
-            print(path)
             if os.path.isdir(os.path.join(source_dir, path)):
-                print('isdir')
                 file_paths += self.collect_files_recursively(os.path.join(source_dir, path))
             elif os.path.isfile(os.path.join(source_dir, path)):
-                print ('isfile')
                 file_paths.append(os.path.join(source_dir, path))
-        
-        print('return', file_paths)
 
         return file_paths
