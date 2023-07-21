@@ -77,21 +77,24 @@ class NeuraLumaWhisperPipeline:
     def get_timestamped_sbv_text(self, transcription):
         output = []
         for chunk in transcription['chunks']:
-            # Extract the timestamp and text from the chunk
-            start_time, end_time = chunk['timestamp']
-            text = chunk['text']
-            
-            # Convert the timestamps to the SBV format (hh:mm:ss.mmm)
-            start_minutes, start_seconds = divmod(start_time, 60)
-            start_hours, start_minutes = divmod(start_minutes, 60)
-            end_minutes, end_seconds = divmod(end_time, 60)
-            end_hours, end_minutes = divmod(end_minutes, 60)
-            
-            start_time_sbv = f"{int(start_hours):02d}:{int(start_minutes):02d}:{start_seconds:06.3f}"
-            end_time_sbv = f"{int(end_hours):02d}:{int(end_minutes):02d}:{end_seconds:06.3f}"
-            
-            # Write the timestamp and text to the file
-            output.append((f"{start_time_sbv},{end_time_sbv}\n{text}"))
+            try:
+                # Extract the timestamp and text from the chunk
+                start_time, end_time = chunk['timestamp']
+                text = chunk['text']
+                
+                # Convert the timestamps to the SBV format (hh:mm:ss.mmm)
+                start_minutes, start_seconds = divmod(start_time, 60)
+                start_hours, start_minutes = divmod(start_minutes, 60)
+                end_minutes, end_seconds = divmod(end_time, 60)
+                end_hours, end_minutes = divmod(end_minutes, 60)
+                
+                start_time_sbv = f"{int(start_hours):02d}:{int(start_minutes):02d}:{start_seconds:06.3f}"
+                end_time_sbv = f"{int(end_hours):02d}:{int(end_minutes):02d}:{end_seconds:06.3f}"
+                
+                # Write the timestamp and text to the file
+                output.append((f"{start_time_sbv},{end_time_sbv}\n{text}"))
+            except:
+                print("Error at chunk, skipping sbv timestamp")
         
         return "\n\n".join(output)
     
@@ -126,19 +129,12 @@ class NeuraLumaWhisperPipeline:
         sbv_column_name = hf_save_dataset_options["text_sbv_column"]
         #subset = hf_save_dataset_options["subset"]
     
-        if isinstance(audio_source_entries, list) and all(isinstance(item, str) for item in audio_source_entries):
+        if isinstance(audio_source_entries, list) and all(isinstance(item, str) for item in audio_source_entries) or all(isinstance(item, dict) for item in audio_source_entries):
             hf_dataset = Dataset.from_dict({
                 audio_column_name: audio_source_entries,
                 text_column_name: [transcription["text"] for transcription in transcriptions],
                 sbv_column_name: [self.get_timestamped_sbv_text(transcription) for transcription in transcriptions],
             }).cast_column(audio_column_name, Audio())
-        elif isinstance(audio_source_entries, list) and all(isinstance(item, dict) for item in audio_source_entries):
-            # ToDo: Audio Columns are still somehow in the wrong format, as it appears in the wrong format in the parquet dataset viewer
-            hf_dataset = Dataset.from_dict({
-                audio_column_name: audio_source_entries,
-                text_column_name: [transcription["text"] for transcription in transcriptions],
-                sbv_column_name: [self.get_timestamped_sbv_text(transcription) for transcription in transcriptions],
-            })
         else:
             raise Exception("The provided type for audio_columns isn't supported")
 
