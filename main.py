@@ -10,6 +10,7 @@ import numpy as np
 
 # ToDo: Refactoring, less clutter and better type hints
 # ToDo: Generalize this class so WebUI can use it easily
+# ToDo: Make return values also be returnable directly so it can be used in workflows
 class CLI:
     def __init__(self, dtype=jnp.float16, batch_size=1, hf_checkpoint='openai/whisper-large-v2', hf_load_dataset_options=None):
         self.audio_converter = AudioConverter()
@@ -26,6 +27,7 @@ class CLI:
             
             print(loaded_dataset)
             
+            # If an error occurs here it might be due to: wrong column name, wrong split. wrong subset. add warning here
             self.audio_data_entries = [audio_data_entry[hf_load_dataset_options["audio_column"]] for audio_data_entry in loaded_dataset]
             
     # ToDo: Move to utility class
@@ -117,26 +119,29 @@ class CLI:
             return
         
         # Build a dataset from audio source entries and transcriptions
-        # Raw Data has to be written to a file first before it can be included in the dataset
-        # Check if audio_source_entries is a list of strings or is composed of numpy floats
-        if isinstance(audio_source_entries, list) and all(isinstance(item, str) for item in audio_source_entries):
-            # We already have a list of paths most likely
-            audio_column_name = hf_save_dataset_options["audio_column"]
-            text_column_name = hf_save_dataset_options["text_column"]
-            sbv_column_name = hf_save_dataset_options["text_sbv_column"]
-            #subset = hf_save_dataset_options["subset"]
+        # Check if audio_source_entries is a list of strings or is list of dicts (probably a hf dataset)
 
+        # We already have a list of paths most likely
+        audio_column_name = hf_save_dataset_options["audio_column"]
+        text_column_name = hf_save_dataset_options["text_column"]
+        sbv_column_name = hf_save_dataset_options["text_sbv_column"]
+        #subset = hf_save_dataset_options["subset"]
+    
+        if isinstance(audio_source_entries, list) and all(isinstance(item, str) for item in audio_source_entries):
             hf_dataset = Dataset.from_dict({
                 audio_column_name: audio_source_entries,
                 text_column_name: [transcription["text"] for transcription in transcriptions],
                 sbv_column_name: [self.get_timestamped_sbv_text(transcription) for transcription in transcriptions],
             }).cast_column(audio_column_name, Audio())
-
-            pass
-        elif isinstance(audio_source_entries, np.ndarray):
-            # We have to write temporary files to disk first
-            # ToDo: Implement
-            raise Exception("Not implemented")
+        elif isinstance(audio_source_entries, list) and all(isinstance(item, dict) for item in audio_source_entries):
+            # Audio source entries is already casted correctly
+            hf_dataset = Dataset.from_dict({
+                audio_column_name: audio_source_entries,
+                text_column_name: [transcription["text"] for transcription in transcriptions],
+                sbv_column_name: [self.get_timestamped_sbv_text(transcription) for transcription in transcriptions],
+            })
+        else:
+            raise Exception("The provided type for audio_columns isn't supported")
 
         split = hf_save_dataset_options["split"]
         target_repository = hf_save_dataset_options["target"]
