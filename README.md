@@ -3,7 +3,7 @@ This repository aims to give an easy way of running Whisper with the following F
 - Transcribe one or multiple Files (.mp3, .mp4)
 - Transcribe one or multiple YouTube videos by URLs*
 - As plain Text or optionaly as timestamped .sbv
-- Usable as a CLI
+- Usable as a CLI & WebUI
 - Supports loading and saving Huggingface Datasets from and to hub
 
 *Please refer to the YouTube ToS. When using this feature, you aknowledge that you have the rights to do so.
@@ -15,14 +15,15 @@ This repository aims to give an easy way of running Whisper with the following F
 - [x] Plain Text Transcription
 - [x] Transcription with Timestamps (.sbv)
 - [x] CLI
-- [ ] WebUI
+- [x] WebUI
 - [ ] Accept More Formats (Audio and Video Formats)
 - [x] Fine-tuned control over used dtype in JAX
 - [ ] Better Error handling (e.g. YouTube)
 - [x] Support for batch-size
 - [x] Support for alternative HuggingFace Checkpoints
 - [ ] Add Post cleanup options (delete temp folder)
-- [ ] Add more verbose logging / progress (CLI)
+- [x] Add more verbose logging / progress (CLI)
+- [ ] Improve Logging
 - [ ] Add name scheming option (output filename)
 - [x] Support to load HF Datasets (Select one audio column, revision, split)
 - [x] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
@@ -31,7 +32,8 @@ This repository aims to give an easy way of running Whisper with the following F
 - [x] CPU instructions
 - [ ] TPU instructions
 - [ ] Apple Silicon (Metal support)
-- [ ] Better Documentation
+- [ ] Documentation CLI
+- [ ] Documentation WebUI
 - [ ] Installation Instructions for Windows
 
 ## Prerequisites
@@ -132,7 +134,7 @@ TODO
 When accessing private datasets, make sure to login with your huggingface account via `huggingface-cli login` and paste your auth token.
 If you do not have one, create one [here](https://huggingface.co/settings/tokens).
 
-You can use the `-ld` or `TODO` argument to load a huggingface audio dataset.
+You can use the `-ld` or `--hf_load_dataset` argument to load a huggingface audio dataset.
 
 Here is an example how to load a dataset from the user `myuser` with the name `my_dataset`:
 ```sh
