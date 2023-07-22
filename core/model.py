@@ -8,7 +8,7 @@ class WhisperModel:
     def __init__(self, dtype=jnp.float16, batch_size=1, checkpoint="openai/whisper-large-v2"):
         self.pipeline = FlaxWhisperPipline(checkpoint, batch_size=batch_size, dtype=dtype)
     
-    def transcribe(self, inputs, add_timestamps=True) -> str:
+    def transcribe(self, inputs, add_timestamps=True) -> dict:
         """
         Transcribes the content of a file located at `file_path` using the pipeline.
 
@@ -23,13 +23,13 @@ class WhisperModel:
             add_timestamps (bool, optional): Whether to add timestamps to the transcribed text. Defaults to True.
 
         Returns:
-            str: The transcribed text.
+            dict: The transcribed text.
         """
         text = self.pipeline(inputs, return_timestamps=add_timestamps)
 
         return text
     
-    def translate(self, inputs, add_timestamps=True) -> str:
+    def translate(self, inputs, add_timestamps=True) -> dict:
         """
         Translates the content of a file located at `file_path` using the pipeline.
         
@@ -44,7 +44,7 @@ class WhisperModel:
             add_timestamps (bool, optional): Whether to include timestamps in the translated text. Defaults to True.
         
         Returns:
-            str: The translated text.
+            dict: The translated text.
         """
         text = self.pipeline(inputs, task="translate", return_timestamps=add_timestamps)
 
