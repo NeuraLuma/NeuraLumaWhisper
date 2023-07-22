@@ -2,6 +2,8 @@
 import argparse
 import jax.numpy as jnp
 from core.pipeline import NeuraLumaWhisperPipeline
+from tqdm import tqdm
+import logging
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="NeuraLumaWhisper transcription tool")
@@ -90,19 +92,34 @@ if __name__ == "__main__":
             "split": hf_save_dataset_split
             }
     
-    print(hf_load_dataset_options)
+    pbar = tqdm()
+    def progress_cb(msg, progress_amount=0):
+        # ToDo: Improve this, the progress bar doesn't really work
+        pbar.update(progress_amount)
+        pbar.set_postfix_str(f"{msg}")
 
-    whisper_pipeline = NeuraLumaWhisperPipeline(dtype=getattr(jnp, dtype), batch_size=batch_size, hf_checkpoint=hf_checkpoint, hf_load_dataset_options=hf_load_dataset_options)
+    whisper_pipeline = NeuraLumaWhisperPipeline(
+        dtype=getattr(jnp, dtype), 
+        batch_size=batch_size, 
+        hf_checkpoint=hf_checkpoint, 
+        hf_load_dataset_options=hf_load_dataset_options,
+        progress_cb=progress_cb
+        )
 
     youtube_urls = youtube.split(";")
 
-    progress_cb = lambda x: print(x)
+    progress_cb("Starting...", 0.0)
 
-    whisper_pipeline.transcribe(source_path=source_path, 
-                                output_path=output_path, 
-                                hf_save_dataset_options=hf_save_dataset_options, 
-                                youtube_urls=youtube_urls, 
-                                add_timestamps=add_timestamps, 
-                                translate=translate,
-                                progress_cb=progress_cb)
+    try:
+        whisper_pipeline.transcribe(source_path=source_path, 
+                                    output_path=output_path, 
+                                    hf_save_dataset_options=hf_save_dataset_options, 
+                                    youtube_urls=youtube_urls, 
+                                    add_timestamps=add_timestamps, 
+                                    translate=translate)
+    except Exception as e:
+        print("\n")
+        logging.error(e, exc_info=True)
+    finally:
+        pbar.close()
     
