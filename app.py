@@ -2,7 +2,121 @@
 from core.pipeline import NeuraLumaWhisperPipeline
 import gradio as gr
 import jax.numpy as jnp
+import functools
 
+## Functions ##
+def sanitize_args_decorator(function_to_decorate):
+    def sanitize(arg):
+        if isinstance(arg, str) and not arg.strip():
+            return None
+        return arg
+
+    @functools.wraps(function_to_decorate)
+    def sanitized_args_function(*args, **kwargs):
+        sanitized_args = tuple(sanitize(arg) for arg in args)
+        sanitized_kwargs = {key: sanitize(value) for key, value in kwargs.items()}
+        return function_to_decorate(*sanitized_args, **sanitized_kwargs)
+
+    return sanitized_args_function
+
+@sanitize_args_decorator
+def handle_submit(
+        input_file, 
+        input_directory, 
+        input_youtube, 
+        load_dataset,
+        load_dataset_subset,
+        load_dataset_split,
+        load_dataset_revision,
+        load_dataset_column,
+        output_directory,
+        save_dataset,
+        save_dataset_revision,
+        save_dataset_split,
+        save_dataset_private,
+        save_dataset_column_audio,
+        save_dataset_column_text,
+        save_dataset_column_text_sbv,
+        dtype_options, 
+        checkpoint,
+        batch_size,
+        translate,
+        add_timestamps,
+        hf_token,
+        progress = gr.Progress()
+):          
+    source_path = None
+    if input_file:
+        source_path = input_file.name
+    
+    output_path = output_directory
+    dtype = dtype_options
+    hf_checkpoint = checkpoint
+    
+    # Input directory will be weighted higher if both options are specified
+    if input_directory:
+        source_path = input_directory
+    
+    hf_load_dataset_options = None
+    if load_dataset:
+        hf_load_dataset_options = {
+            "source": load_dataset, 
+            "audio_column": load_dataset_column, 
+            "revision": load_dataset_revision,
+            "subset": load_dataset_subset,
+            "split": load_dataset_split
+            }
+    
+    hf_save_dataset_options = None
+    if save_dataset:
+        hf_save_dataset_options = {
+            "target": save_dataset, 
+            "private": save_dataset_private,
+            "audio_column": save_dataset_column_audio, 
+            "text_column": save_dataset_column_text,
+            "text_sbv_column": save_dataset_column_text_sbv,
+            "revision": save_dataset_revision,
+            #"subset": hf_save_dataset_subset,
+            "split": save_dataset_split
+            }
+    
+    youtube = input_youtube
+    
+    if not youtube and not source_path and not load_dataset:
+        raise gr.Error("Please specify either YouTube Urls and/or a Dataset and/or a File or a directory")
+    
+    if not output_path and not save_dataset:
+        raise gr.Error("Please specify either an Output Directory or a Dataset")
+    
+    if youtube is None:
+        youtube = ""
+    
+    def progress_cb(msg, progress_amount=0):
+        progress(progress_amount, desc=f"{msg}")
+
+    whisper_pipeline = NeuraLumaWhisperPipeline(
+        dtype=getattr(jnp, dtype), 
+        batch_size=batch_size, 
+        hf_checkpoint=hf_checkpoint, 
+        hf_load_dataset_options=hf_load_dataset_options,
+        hf_token=hf_token,
+        progress_cb=progress_cb
+        )
+
+    youtube_urls = youtube.split("\n")
+
+    progress(0, desc="Starting...")
+
+    whisper_pipeline.transcribe(source_path=source_path, 
+                                output_path=output_path, 
+                                hf_save_dataset_options=hf_save_dataset_options, 
+                                youtube_urls=youtube_urls, 
+                                add_timestamps=add_timestamps, 
+                                translate=translate)
+    
+    return "Complete!"
+
+## UI ##
 with gr.Blocks() as iface:
     # Options for the checkboxes
     supported_dtypes =['float16', 'bfloat16', 'float32', 'float64']
@@ -15,7 +129,9 @@ with gr.Blocks() as iface:
                 with gr.Column():
                     gr.Markdown("""## Input Options
                                 Multiple may be used at once. 
+
                                 Note: Only a File or Directory may be used (Directory is preferenced if both are used).
+
                                 Leave options blank to not use them.""")
                     with gr.Tab(label="File"):
                         input_file = gr.File(label=f"Input File ({', '.join(supported_input_filetypes)})", file_types=supported_input_filetypes)
@@ -40,7 +156,11 @@ with gr.Blocks() as iface:
                 
                 with gr.Column():
                     gr.Markdown("""## Output Options
-                                Multiple may be used at once. Leave options blank to not use them.""")
+                                Multiple may be used at once. 
+                                
+                                Leave options blank to not use them.
+                                
+                                <br/>""")
 
                     with gr.Tab(label="Directory"):
                         output_directory = gr.Textbox(label="Output Directory to save to", interactive=True)
@@ -57,7 +177,7 @@ with gr.Blocks() as iface:
                                                                   interactive=True, value="sbv")
                 
             submit_button = gr.Button("Transcribe", variant="primary")
-            output = gr.Text(label="Information", interactive=False)
+            status = gr.Textbox(label="Status", interactive=False)
             
     with gr.Tab(label="Model Options"):
         with gr.Row():
@@ -91,25 +211,9 @@ with gr.Blocks() as iface:
                             Only necessary if not authenticated already via huggingface-cli login""", 
                             type="password",
                             interactive=True)
-
-    def sanitize_args_decorator(function_to_decorate):
-        def sanitize(arg):
-            if isinstance(arg, str) and not arg.strip():
-                return None
-            return arg
-
-        def sanitized_args_function(*args, **kwargs):
-            sanitized_args = tuple(sanitize(arg) for arg in args)
-            sanitized_kwargs = {key: sanitize(value) for key, value in kwargs.items()}
-            return function_to_decorate(*sanitized_args, **sanitized_kwargs)
-
-        return sanitized_args_function
-
-    def update_progress(value):
-        print(value)
     
-    @sanitize_args_decorator
-    def handle_submit(
+    submit_button.click(fn=handle_submit, 
+        inputs=[
             input_file, 
             input_directory, 
             input_youtube, 
@@ -132,101 +236,8 @@ with gr.Blocks() as iface:
             translate,
             add_timestamps,
             hf_token
-    ):  
-        source_path = None
-        if input_file:
-            source_path = input_file
-        
-        output_path = output_directory
-        dtype = dtype_options
-        hf_checkpoint = checkpoint
-        
-        # Input directory will be weighted higher if both options are specified
-        if input_directory:
-            source_path = input_directory
-        
-        hf_load_dataset_options = None
-        if load_dataset:
-            hf_load_dataset_options = {
-                "source": load_dataset, 
-                "audio_column": load_dataset_column, 
-                "revision": load_dataset_revision,
-                "subset": load_dataset_subset,
-                "split": load_dataset_split
-                }
-        
-        hf_save_dataset_options = None
-        if save_dataset:
-            hf_save_dataset_options = {
-                "target": save_dataset, 
-                "private": save_dataset_private,
-                "audio_column": save_dataset_column_audio, 
-                "text_column": save_dataset_column_text,
-                "text_sbv_column": save_dataset_column_text_sbv,
-                "revision": save_dataset_revision,
-                #"subset": hf_save_dataset_subset,
-                "split": save_dataset_split
-                }
-        
-        youtube = input_youtube
-        
-        if not youtube and not source_path and not load_dataset:
-            raise gr.Error("Please specify either YouTube Urls and/or a Dataset and/or a File or a directory")
-        
-        if not output_path and not save_dataset:
-            raise gr.Error("Please specify either an Output Directory or a Dataset")
-        
-        if youtube is None:
-            youtube = ""
-        
-        progress_cb = update_progress
-
-        whisper_pipeline = NeuraLumaWhisperPipeline(
-            dtype=getattr(jnp, dtype), 
-            batch_size=batch_size, 
-            hf_checkpoint=hf_checkpoint, 
-            hf_load_dataset_options=hf_load_dataset_options,
-            hf_token=hf_token,
-            progress_cb=progress_cb
-            )
-
-        youtube_urls = youtube.split("\n")
-
-        whisper_pipeline.transcribe(source_path=source_path, 
-                                    output_path=output_path, 
-                                    hf_save_dataset_options=hf_save_dataset_options, 
-                                    youtube_urls=youtube_urls, 
-                                    add_timestamps=add_timestamps, 
-                                    translate=translate)
-        
-        return "Complete!"
-    
-    submit_button.click(fn=handle_submit, 
-                        inputs=[
-                            input_file, 
-                            input_directory, 
-                            input_youtube, 
-                            load_dataset,
-                            load_dataset_subset,
-                            load_dataset_split,
-                            load_dataset_revision,
-                            load_dataset_column,
-                            output_directory,
-                            save_dataset,
-                            save_dataset_revision,
-                            save_dataset_split,
-                            save_dataset_private,
-                            save_dataset_column_audio,
-                            save_dataset_column_text,
-                            save_dataset_column_text_sbv,
-                            dtype_options, 
-                            checkpoint,
-                            batch_size,
-                            translate,
-                            add_timestamps,
-                            hf_token
-                            ], 
-                        outputs=[output])
+            ], 
+        outputs=[status])
 
 # Launch the interface
 iface.queue().launch()
