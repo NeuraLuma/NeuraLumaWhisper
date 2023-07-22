@@ -3,7 +3,7 @@ from core.converter import AudioConverter
 import os
 import shutil
 import jax.numpy as jnp
-from datasets import load_dataset, Dataset, Audio
+from datasets import load_dataset, Dataset, Audio, concatenate_datasets
 
 # ToDo: Refactoring, less clutter and better type hints
 # ToDo: Make return values also be returnable directly so it can be used in workflows
@@ -27,7 +27,7 @@ class NeuraLumaWhisperPipeline:
         # ToDo: Check if subsets work properly
         # ToDo: Check whether local datasets work as well
         if hf_load_dataset_options:
-            self.progress_cb("Loading dataset")
+            self.progress_cb("Loading dataset", 0.0)
             loaded_dataset = load_dataset(
                 path=hf_load_dataset_options["source"], 
                 name=hf_load_dataset_options["subset"],
@@ -35,6 +35,7 @@ class NeuraLumaWhisperPipeline:
                 split=hf_load_dataset_options["split"],
                 use_auth_token=self.hf_token
                 )
+            self.progress_cb("Loaded dataset", 1.0)
             
             # ToDo: If an error occurs here it might be due to: wrong column name, wrong split. wrong subset. add warning here
             self.audio_data_entries = [audio_data_entry[hf_load_dataset_options["audio_column"]] for audio_data_entry in loaded_dataset]
@@ -63,30 +64,65 @@ class NeuraLumaWhisperPipeline:
     def transcribe(self, source_path, output_path=None, hf_save_dataset_options=None, youtube_urls=[], add_timestamps=False, translate=False, cleanup=True):
         source_path_type = self.is_directory_or_file(source_path)
 
+        transcriptions = []
+
+        # Structure: keys: audio_entry: str | dict, transcription: dict
+
         if source_path_type is None and len(youtube_urls) <= 0:
             raise Exception("Source path is not a directory or a file.")
-        elif source_path_type == 'file':
+        
+        # ToDo: Count total transcriptions for progress tracking
+
+        file_transcript = None
+        directory_transcriptions = None
+        youtube_transcriptions = None
+        raw_transcriptions = None
+
+        # Transcribing all sources
+        if source_path_type == 'file':
             source_dir, source_file = os.path.split(source_path)
-            self.transcribe_file(source_dir=source_dir, source_file=source_file, output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+            file_transcript = self.transcribe_file(source_dir=source_dir, source_file=source_file, output_path=output_path, add_timestamps=add_timestamps, translate=translate)
         elif source_path_type == 'directory':
             source_dir = source_path
-            self.transcribe_dir(source_dir=source_dir, output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+            directory_transcriptions = self.transcribe_dir(source_dir=source_dir, add_timestamps=add_timestamps, translate=translate)
         
         if len(youtube_urls) > 0:
-            self.transcribe_youtube(youtube_urls=youtube_urls, output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+            youtube_transcriptions = self.transcribe_youtube(youtube_urls=youtube_urls, output_path=output_path, add_timestamps=add_timestamps, translate=translate)
         
         if self.audio_data_entries and len(self.audio_data_entries) > 0:
-            self.transcribe_raw_audio(data_entries=self.audio_data_entries, output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+            raw_transcriptions = self.transcribe_raw_audio(data_entries=self.audio_data_entries, add_timestamps=add_timestamps, translate=translate)
         
-        # ToDo: Make this conditional, perhaps but this in another command
+        # Appending transcriptions
+        if file_transcript is not None:
+            transcriptions.append(file_transcript)
+        
+        if directory_transcriptions is not None:
+            transcriptions.extend(directory_transcriptions)
+        
+        if youtube_transcriptions is not None:
+            transcriptions.extend(youtube_transcriptions)
+        
+        if raw_transcriptions is not None:
+            transcriptions.extend(raw_transcriptions)
+
+        if output_path:
+            for idx, transcription in enumerate(transcriptions):
+                # Set base_output_filename to idx_ + audio_entry if is str else idx
+                base_output_filename = str(idx) + "_" + os.path.basename(transcription["audio_entry"]).split(".")[0] if isinstance(transcription["audio_entry"], str) else str(idx)
+                self.write_transcription_to_file(transcription=transcription, base_ouput_filename=base_output_filename, output_path=output_path, translate=translate, add_timestamps=add_timestamps)
+                
+        if hf_save_dataset_options:
+            self.write_transcriptions_to_hf_dataset(transcriptions=transcriptions, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+
+        # ToDo: Make this conditional, perhaps put this in another command
         if cleanup:
-            self.progress_cb("Cleaning up and removing temp folder")
+            self.progress_cb("Cleaning up and removing temp folder", 0.0)
             if os.path.exists('temp'):
                 shutil.rmtree('temp')
-            self.progress_cb("Done!")
+        self.progress_cb("Finished transcribing!", 1.0)
     def get_timestamped_sbv_text(self, transcription):
         output = []
-        for chunk in transcription['chunks']:
+        for chunk in transcription['transcription']['chunks']:
             try:
                 # Extract the timestamp and text from the chunk
                 start_time, end_time = chunk['timestamp']
@@ -104,7 +140,7 @@ class NeuraLumaWhisperPipeline:
                 # Write the timestamp and text to the file
                 output.append((f"{start_time_sbv},{end_time_sbv}\n{text}"))
             except:
-                self.progress_cb("Error at chunk, skipping sbv timestamp")
+                self.progress_cb("Error at chunk, skipping sbv timestamp", 1.0)
         
         return "\n\n".join(output)
     
@@ -117,16 +153,20 @@ class NeuraLumaWhisperPipeline:
         if not os.path.exists(output_path):
             os.makedirs(output_path)
         
+        self.progress_cb(f"Writing {'transcription' if not translate else 'translation'} to file", 0.0)
         with open(os.path.join(output_path, base_output_filename + ".txt"), 'w') as f:
-            f.write(transcription['text'])
+            f.write(transcription['transcription']['text'])
+        self.progress_cb("Done!", 1.0)
         
         if add_timestamps:
+            self.progress_cb(f"Writing {'transcription' if not translate else 'translation'} timestamps to file", 0.0)
             with open(os.path.join(output_path, base_output_filename + ".sbv"), "w", encoding="utf-8") as sbv_file:
                 sbv_text = self.get_timestamped_sbv_text(transcription)
                 # Write the timestamp and text to the file
                 sbv_file.write(sbv_text)
+            self.progress_cb("Done!", 1.0)
     
-    def write_transcriptions_to_hf_dataset(self, audio_source_entries, transcriptions, hf_save_dataset_options, add_timestamps=False, translate=False):
+    def write_transcriptions_to_hf_dataset(self, transcriptions, hf_save_dataset_options, add_timestamps=False, translate=False):
         if not transcriptions or len(transcriptions) <= 0:
             return
         
@@ -139,12 +179,29 @@ class NeuraLumaWhisperPipeline:
         sbv_column_name = hf_save_dataset_options["text_sbv_column"]
         #subset = hf_save_dataset_options["subset"]
     
-        if isinstance(audio_source_entries, list) and all(isinstance(item, str) for item in audio_source_entries) or all(isinstance(item, dict) for item in audio_source_entries):
-            hf_dataset = Dataset.from_dict({
-                audio_column_name: audio_source_entries,
-                text_column_name: [transcription["text"] for transcription in transcriptions],
-                sbv_column_name: [self.get_timestamped_sbv_text(transcription) for transcription in transcriptions],
+        if isinstance(transcriptions, list) and all(isinstance(transcription["audio_entry"], str) or isinstance(transcription["audio_entry"], dict) for transcription in transcriptions):
+            self.progress_cb("Creating dataset", 0.0)
+
+            # As audio_column_name can contain both str and dict, we need to create two datasets, cast Audio and then concatenate
+            # As casting only supports either all str or all dict
+            # Create two dicts, depending on type of audio_entry
+            path_entries = [entry for entry in transcriptions if isinstance(entry["audio_entry"], str)]
+            dict_entries = [entry for entry in transcriptions if isinstance(entry["audio_entry"], dict)]
+
+            dataset_with_audio_entry_paths = Dataset.from_dict({
+                audio_column_name: [entry["audio_entry"] for entry in path_entries],
+                text_column_name: [entry["transcription"]["text"] for entry in path_entries],
+                sbv_column_name: [self.get_timestamped_sbv_text(entry) for entry in path_entries],
             }).cast_column(audio_column_name, Audio())
+
+            dataset_with_audio_entry_structs = Dataset.from_dict({
+                audio_column_name: [entry["audio_entry"] for entry in dict_entries],
+                text_column_name: [entry["transcription"]["text"] for entry in dict_entries],
+                sbv_column_name: [self.get_timestamped_sbv_text(entry) for entry in dict_entries],
+            }).cast_column(audio_column_name, Audio())
+
+            hf_dataset = concatenate_datasets([dataset_with_audio_entry_paths, dataset_with_audio_entry_structs])
+            self.progress_cb("Done!", 1.0)
         else:
             raise Exception("The provided type for audio_columns isn't supported")
 
@@ -154,38 +211,43 @@ class NeuraLumaWhisperPipeline:
         private = hf_save_dataset_options["private"]
 
         # ToDo: Make this conditional, return value might be desired to be the dataset itself or save to file
+        self.progress_cb("Pushing Dataset to HuggingFace", 0.0)
         hf_dataset.push_to_hub(target_repository, split=split, branch=revision, private=private, token=self.hf_token)
+        self.progress_cb("Done!", 1.0)
 
-    def transcribe_raw_audio(self, data_entries, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
+    def transcribe_raw_audio(self, data_entries, add_timestamps=False, translate=False):
         transcriptions = []
         for idx, data_entry in enumerate(data_entries):
             if not translate:
-                self.progress_cb(f"Transcribing audio file {idx+1} of {len(data_entries)}")
+                self.progress_cb(f"Transcribing audio file {idx+1} of {len(data_entries)}", idx / len(data_entries))
                 transcription = self.whisper_model.transcribe(inputs=data_entry, add_timestamps=add_timestamps)
-                self.progress_cb("Done!")
+                self.progress_cb("Done!", (idx+1) / len(data_entries))
             else:
-                self.progress_cb(f"Translating audio file {idx+1} of {len(data_entries)}")
+                self.progress_cb(f"Translating audio file {idx+1} of {len(data_entries)}", idx / len(data_entries))
                 transcription = self.whisper_model.translate(inputs=data_entry, add_timestamps=add_timestamps)
-                self.progress_cb("Done!")
+                self.progress_cb("Done!", (idx+1) / len(data_entries))
             transcriptions.append(transcription)
         
-        # ToDo: This code is duplicated, it should be refactored in a way that can be reused and allows hf_datasets as well
-        if output_path:
-            for idx, transcription in enumerate(transcriptions):
-                base_output_filename = str(idx)
-                self.write_transcription_to_file(transcription=transcription, base_ouput_filename=base_output_filename, output_path=output_path, translate=translate, add_timestamps=add_timestamps)
-                
-        if hf_save_dataset_options:
-            self.write_transcriptions_to_hf_dataset(audio_source_entries=data_entries, transcriptions=transcriptions, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+        return [
+            {
+                'audio_entry': data_entry, 
+                'transcription': transcription
+            } for data_entry, transcription in zip(data_entries, transcriptions)
+            ]
 
-    def transcribe_youtube(self, youtube_urls, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
+    def transcribe_youtube(self, youtube_urls, output_path, add_timestamps=False, translate=False):
         converted_paths, _ = self.audio_converter.convert_multiple_from_youtube(urls=youtube_urls)
+        file_transcriptions = []
 
-        for path in converted_paths:
-            self.progress_cb(f"Transcribing audio file sourced from YouTube {path}")
-            self.transcribe_file(source_dir=os.path.dirname(path), source_file=os.path.basename(path), output_path=output_path, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+        for idx, path in enumerate(converted_paths):
+            self.progress_cb(f"Transcribing audio file sourced from YouTube {path}", idx / len(converted_paths))
+            file_transcription = self.transcribe_file(source_dir=os.path.dirname(path), source_file=os.path.basename(path), output_path=output_path, add_timestamps=add_timestamps, translate=translate)
+            file_transcriptions.append(file_transcription)
+            self.progress_cb("Done!", (idx+1) / len(converted_paths))
+        
+        return file_transcriptions
 
-    def transcribe_file(self, source_dir, source_file, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
+    def transcribe_file(self, source_dir, source_file, output_path, add_timestamps=False, translate=False):
         file_path = os.path.join(source_dir, source_file)
 
         # Transcription logic for a single file
@@ -200,27 +262,23 @@ class NeuraLumaWhisperPipeline:
         transcription = {}
 
         if not translate:
-            self.progress_cb(f"Transcribing {file_type} file {source_file}")
+            self.progress_cb(f"Transcribing {file_type} file {source_file}", 0.0)
             transcription = self.whisper_model.transcribe(inputs=source_audio_file_path, add_timestamps=add_timestamps)
-            self.progress_cb("Done!")
+            self.progress_cb("Done!", 1.0)
         else:
-            self.progress_cb(f"Translating {file_type} file {source_file}")
+            self.progress_cb(f"Translating {file_type} file {source_file}", 0.0)
             transcription = self.whisper_model.translate(inputs=source_audio_file_path, add_timestamps=add_timestamps)
-            self.progress_cb("Done!")
+            self.progress_cb("Done!", 1.0)
 
-        base_output_filename = os.path.basename(file_path).split(".")[0]
+        return {
+            'audio_entry': source_audio_file_path,
+            'transcription': transcription
+        }
 
-        if output_path:
-            self.write_transcription_to_file(transcription=transcription, base_ouput_filename=base_output_filename, output_path=output_path, translate=translate, add_timestamps=add_timestamps)
-        
-        if hf_save_dataset_options:
-            self.write_transcriptions_to_hf_dataset(audio_source_entries=[source_audio_file_path], transcriptions=[transcription], hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
-
-
-    def transcribe_dir(self, source_dir, output_path, hf_save_dataset_options, add_timestamps=False, translate=False):
-        # ToDo: Cleanup temp files (conversions, downloads)
-
+    def transcribe_dir(self, source_dir, add_timestamps=False, translate=False):
+        self.progress_cb("Collecting files", 0.0)
         files = self.collect_files_recursively(source_dir)
+        self.progress_cb("Done!", 1.0)
 
         audio_files = []
         video_files = []
@@ -233,39 +291,32 @@ class NeuraLumaWhisperPipeline:
             elif file_type == 'video':
                 video_files.append(file)
 
-        for audio_file in audio_files:
+        for idx, audio_file in enumerate(audio_files):
             if not translate:
+                self.progress_cb(f"Transcribing {file_type} file {audio_file}", idx / len(audio_files))
                 transcriptions[audio_file] = self.whisper_model.transcribe(audio_file, add_timestamps=add_timestamps)
+                self.progress_cb("Done!", (idx+1) / len(audio_files))
             else:
+                self.progress_cb(f"Translating {file_type} file {audio_file}", idx / len(audio_files))
                 transcriptions[audio_file] = self.whisper_model.translate(audio_file, add_timestamps=add_timestamps)
+                self.progress_cb("Done!", (idx+1) / len(audio_files))
         
         if len(video_files) > 0:
             # Files with the same name in nested directory could cause an error
             output_file_names = [os.path.basename(video_file_path).split(".")[0] + ".mp3" for video_file_path in video_files]
             video_audio_files = self.audio_converter.convert_multiple_from_videos(input_source_paths=video_files, output_file_names=output_file_names)
 
-            for video_audio_file in video_audio_files:
+            for idx, video_audio_file in enumerate(video_audio_files):
                 if not translate:
-                    self.progress_cb(f"Transcribing {file_type} file {video_audio_file}")
+                    self.progress_cb(f"Transcribing {file_type} file {video_audio_file}", idx / len(video_audio_files))
                     transcriptions[video_audio_file] = self.whisper_model.transcribe(video_audio_file, add_timestamps=add_timestamps)
-                    self.progress_cb("Done!")
+                    self.progress_cb("Done!", (idx+1) / len(video_audio_files))
                 else:
-                    self.progress_cb(f"Translating {file_type} file {video_audio_file}")
+                    self.progress_cb(f"Translating {file_type} file {video_audio_file}", idx / len(video_audio_files))
                     transcriptions[video_audio_file] = self.whisper_model.translate(video_audio_file, add_timestamps=add_timestamps)
-                    self.progress_cb("Done!")
-
-        if not os.path.exists(output_path):
-            os.makedirs(output_path)
-
-        if output_path:
-            for file_path, transcription_content in transcriptions.items():
-                # Extract the base filename from the path
-                base_filename = os.path.basename(file_path).split(".")[0]
-
-                self.write_transcription_to_file(transcription=transcription_content, base_ouput_filename=base_filename, output_path=output_path, translate=translate, add_timestamps=add_timestamps)
+                    self.progress_cb("Done!", (idx+1) / len(video_audio_files))
         
-        if hf_save_dataset_options:
-            self.write_transcriptions_to_hf_dataset(audio_source_entries=audio_files, transcriptions=transcriptions, hf_save_dataset_options=hf_save_dataset_options, add_timestamps=add_timestamps, translate=translate)
+        return [{'audio_entry': file_path, 'transcription': transcription} for file_path, transcription in transcriptions.items()]
 
     def collect_files_recursively(self, source_dir):
         file_paths = []
