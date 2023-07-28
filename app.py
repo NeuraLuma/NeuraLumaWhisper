@@ -137,20 +137,21 @@ with gr.Blocks() as iface:
                         input_file = gr.File(label=f"Input File ({', '.join(supported_input_filetypes)})", file_types=supported_input_filetypes)
 
                     with gr.Tab(label="Directory"):
-                        input_directory = gr.Textbox(label="Directory to load from", interactive=True)
+                        input_directory = gr.Textbox(label="Directory to load from", placeholder="/path/to/directory", interactive=True)
 
                     with gr.Tab(label="YouTube"):
                         input_youtube = gr.Textbox(
                             label="YouTube URLs", 
                             info="Add URLs of the YouTube videos to be transcribed, put each URL in a new line", 
+                            placeholder="https://www.youtube.com/watch?v=JXkWbSSe5MY&t=2s&pp=ygUGOG15bGV6\nhttps://www.youtube.com/watch?v=AKf9RkA_iEs&pp=ygUGOG15bGV6",
                             lines=10, 
                             multiline=True, 
                             interactive=True)
 
                     with gr.Tab(label="Huggingface Dataset"):
-                        load_dataset = gr.Textbox(label="Dataset path", interactive=True)
+                        load_dataset = gr.Textbox(label="Dataset path", placeholder="myuser/mydataset", interactive=True)
                         load_dataset_subset = gr.Textbox(label="Dataset subset", interactive=True)
-                        load_dataset_split = gr.Textbox(label="Dataset split", interactive=True)
+                        load_dataset_split = gr.Textbox(label="Dataset split", placeholder="train", interactive=True)
                         load_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main")
                         load_dataset_column = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio")
                 
@@ -163,13 +164,13 @@ with gr.Blocks() as iface:
                                 <br/>""")
 
                     with gr.Tab(label="Directory"):
-                        output_directory = gr.Textbox(label="Output Directory to save to", interactive=True)
+                        output_directory = gr.Textbox(label="Output Directory to save to", placeholder="/path/to/directory", interactive=True)
 
                     with gr.Tab(label="Huggingface Dataset"):
-                        save_dataset = gr.Textbox(label="Dataset path", interactive=True)
+                        save_dataset = gr.Textbox(label="Dataset path", placeholder="myuser/mydataset", interactive=True)
                         save_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main")
                         #save_dataset_subset = gr.Textbox(label="Dataset subset", interactive=True)
-                        save_dataset_split = gr.Textbox(label="Dataset split", interactive=True)
+                        save_dataset_split = gr.Textbox(label="Dataset split", placeholder="train", interactive=True)
                         save_dataset_private = gr.Checkbox(label="Private", interactive=True, value=True)
                         save_dataset_column_audio = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio")
                         save_dataset_column_text = gr.Textbox(label="Dataset column name for normal transcription", interactive=True, value="text")
@@ -178,8 +179,21 @@ with gr.Blocks() as iface:
                 
             submit_button = gr.Button("Transcribe", variant="primary")
             status = gr.Textbox(label="Status", interactive=False)
-            
-    with gr.Tab(label="Model Options"):
+
+    with gr.Tab(label="Whisper Options"):
+        with gr.Row():
+            with gr.Column():
+                translate = gr.Checkbox(
+                    label="Translate", 
+                    info="Translates the audio to english regardless of source language", 
+                    value=False)
+                add_timestamps = gr.Checkbox(label="Add Additional Timestamps", 
+                                             info="""Uses sbv formatting for additional timestamps. 
+                                             A seperate file / column for Huggingface Datasets will be created""", 
+                                             value=False)
+
+
+    with gr.Tab(label="Advanced Model Options"):
         with gr.Row():
             dtype_options = gr.Dropdown(choices=supported_dtypes, 
                                         label="Model dtype", 
@@ -193,17 +207,6 @@ with gr.Blocks() as iface:
         
         with gr.Row():
             batch_size = gr.Number(label="Batch size", value=1, minimum=1, interactive=True)
-
-        with gr.Row():
-            with gr.Column():
-                translate = gr.Checkbox(
-                    label="Translate", 
-                    info="Translates the audio to english regardless of source language", 
-                    value=False)
-                add_timestamps = gr.Checkbox(label="Add Additional Timestamps", 
-                                             info="""Uses sbv formatting for additional timestamps. 
-                                             A seperate file / column for Huggingface Datasets will be created""", 
-                                             value=False)
         
     with gr.Tab(label="Huggingface Authentication"):
         hf_token = gr.Textbox(label="Huggingface Token", value="", 
