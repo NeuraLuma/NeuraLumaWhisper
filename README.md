@@ -44,7 +44,7 @@ New commits to this repository might introduce breaking changes and break existi
 - [x] CPU instructions
 - [ ] TPU instructions
 - [ ] Apple Silicon (Metal support)
-- [ ] Documentation CLI
+- [x] Documentation CLI
 - [ ] Documentation WebUI
 - [ ] Installation Instructions for Windows
 
