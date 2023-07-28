@@ -8,6 +8,10 @@ This repository aims to give an easy way of running Whisper with the following F
 
 *Please refer to the YouTube ToS. When using this feature, you aknowledge that you have the rights to do so.
 
+## Disclaimer
+This repository is not perfect and not finished. There are still a lot of potential improvements that could be made. The repository could be seen in an "Experimental" Stage that has been created to prototype a potential tool that we might build upon in the future. We wanted to share our progress, so you might be able to use it, build upon it, or experiment with it as you wish.
+New commits to this repository might introduce breaking changes and break existing code, so use with caution.
+
 ## ToDos
 - [x] Transcribe Audio File(s)
 - [x] Transcribe Video File(s)
@@ -21,13 +25,21 @@ This repository aims to give an easy way of running Whisper with the following F
 - [ ] Better Error handling (e.g. YouTube)
 - [x] Support for batch-size
 - [x] Support for alternative HuggingFace Checkpoints
-- [ ] Add Post cleanup options (delete temp folder)
+- [x] Add Post cleanup options (delete temp folder)
 - [x] Add more verbose logging / progress (CLI)
-- [ ] Improve Logging
+- [ ] Improve Logging Progress
 - [ ] Add name scheming option (output filename)
 - [x] Support to load HF Datasets (Select one audio column, revision, split)
 - [x] Support to save HF Datasets (Audio -> Text Caption + Optional Timestamped caption)
+- [ ] Add option to save subsets and not just load them
 - [ ] Support to optionally push to hub and load/save from local
+- [ ] Simplify useage with code directly, so it can be used in pipelines
+- [ ] Improve Error Handling and introduce checkpoints so progress may not be lost in a late error
+- [ ] Improve Temp Folder Implementation, as it depends on execution context and might create temp folders when executing outside directory
+- [ ] Make more flexible so other Models / Implementations can be used (e.g. the original HF implementation)
+- [ ] UI: Add direct text output option
+- [ ] Add option to provide multiple file-paths instead of just one file or one directory
+- [ ] Implement yielding of chunks so output can be streamed
 - [x] GPU instructions
 - [x] CPU instructions
 - [ ] TPU instructions
