@@ -95,7 +95,7 @@ conda deactivate
 ```
 
 ### Installation on Windows:
-TODO
+Refer to this [Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/windows.html).
 
 ## Installation
 
@@ -125,22 +125,47 @@ conda activate NeuraLumaWhisperCPU
 ```
 
 ### Windows (GPU)
-TODO
+Make sure to open a Powershell Terminal.
+```sh
+conda env create -f environmentGPU.yaml
+conda activate NeuraLumaWhisperGPU
+```
 
 ### Windows (CPU)
-TODO
-
-## Usage
-TODO
+Make sure to open a Powershell Terminal.
+```sh
+conda env create -f environmentCPU.yaml
+conda activate NeuraLumaWhisperCPU
+```
 
 ### Basic Options
-e.g. Timestamp, Translate, Output path TODO
+`-tl`, `--translate`: Activates translation mode. All audio will automatically be transcribed to english.
+`-ts`, `--timestamp`: Activates timestamps. Adds a separate file with sbv extension / add a column in the HF Dataset.
+`-o`, `--output`: Path to the directory for the transcribed files.
 
 ### Loading Audio / Video File(s) from a path
-TODO
+You can load audio or video files from a path using the `-s` or `--source` argument.
+
+Loading a single audio file:
+```sh
+python main.py -s "/path/to/audio/file.mp3" -o /path/to/output/
+```
+or a video file:
+```sh
+python main.py -s "/path/to/video/file.mp4" -o /path/to/output/
+```
+
+You may also provide a path to a directory with your audio and video files. All nested folders will be automatically searched for compatible audio and video files:
+```sh
+python main.py -s "/path/to/files" -o /path/to/output/
+```
 
 ### Loading one or multiple YouTube videos
-TODO
+For loading YouTube videos, use the `-y` or `--youtube` argument. For multiple videos, separate the URLs with semicolons.
+
+```sh
+python main.py -y "youtube.com/watch?v=abcd;youtube.com/watch?v=efgh" -o /path/to/output/
+```
 
 ### Loading an Audio Huggingface Dataset
 When accessing private datasets, make sure to login with your huggingface account via `huggingface-cli login` and paste your auth token.
@@ -153,17 +178,17 @@ Here is an example how to load a dataset from the user `myuser` with the name `m
 python main.py -ld "myuser/my_dataset" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
 ```
 
-If your datasets have splits you can add the name to load via the `-ldsp` or `TODO` argument e.g. `train`:
+If your datasets have splits you can add the name to load via the `-ldsp` or `--hf_load_dataset_split` argument e.g. `train`:
 ```sh
 python main.py -ld "myuser/my_dataset" -ldsp "train" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
 ```
 
-The default revision / branch to load is set to `main`, however you can change that with the `-ldr` or `TODO` argument e.g. `trunk`:
+The default revision / branch to load is set to `main`, however you can change that with the `-ldr` or `--hf_load_dataset_revision` argument e.g. `trunk`:
 ```sh
 python main.py -ld "myuser/my_dataset" -ldsp "train" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
 ```
 
-The default column name is set to `audio`, if it's different you can change it with the `-ldc` or `TODO` argument e.g. `some_audio`:
+The default column name is set to `audio`, if it's different you can change it with the `-ldc` or `--hf_load_dataset_column` argument e.g. `some_audio`:
 ```sh
 python main.py -ld "myuser/my_dataset" -ldsp "train" -ldc "some_audio" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -hfc "openai/whisper-large"
 ```
@@ -183,7 +208,7 @@ To create a audio to text dataset you simply have to supply a repository path of
 python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example"
 ```
 
-Repositories are private by default, you can change that by using `-sp` or `--hf_save_dataset_private`:
+Repositories are private by default, you can change that by using `-sdp` or `--hf_save_dataset_private`:
 ```sh
 python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sp False
 ```
@@ -204,8 +229,26 @@ Also you may change the revision / branch name on huggingface by specifying `-sd
 python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sdr "trunk"
 ```
 
+You can also specify a split by using `-sdsp` or `--hf_save_dataset_split`:
+```sh
+python main.py -s "/Users/lily/NeuraLuma/NeuraLumaWhisper/files_in/" -o /Users/lily/NeuraLuma/NeuraLumaWhisper/files_out/ -ts -d "bfloat16" -b "4" -sd "example_user/example" -sdr "trunk" -sdsp "train"
+```
+
 ### Advanced Model Options
-e.g. batchsize, dtype, other checkpoint TODO
+**Batch Size**: Sets the batch size for inference. The batch size can significantly impact the speed and memory usage of model inference. Larger batch sizes allow the model to process more data at once, but require more memory. Conversely, smaller batch sizes use less memory but may take longer to process the same amount of data. Also note that, the Word Error Rate may increase slightly depending on the Batch Size. You can set the batch size with `-b` or `--batch_size`. Default is `1`. Example:
+```sh
+python main.py -b "4" ...
+```
+
+**Data Type (dtype)**: Specifies the data type to use. Different data types use different amounts of memory and have different levels of numerical precision. Options include `float16`, `bfloat16`, `float32`, and `float64`. You can set the data type with `-d` or `--dtype`. Default is `float16`. We recommend using either `float16` (for most users) or using `bfloat16` (for example TPU / A100 users). Example:
+```sh
+python main.py -d "bfloat16" ...
+```
+
+**Hugging Face Checkpoint**: Specifies the pre-trained model to use for inference. The model is specified by the name of its checkpoint on the Hugging Face model hub. You can set the checkpoint with `-hfc` or `--hf_checkpoint`. Default is `openai/whisper-large-v2`. Example:
+```sh
+python main.py -hfc "openai/whisper-large" ...
+```
 
 ## License
 Please refer to the License file of this repository.
