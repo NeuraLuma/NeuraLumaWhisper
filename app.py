@@ -150,10 +150,10 @@ with gr.Blocks() as iface:
 
                     with gr.Tab(label="Huggingface Dataset"):
                         load_dataset = gr.Textbox(label="Dataset path", placeholder="myuser/mydataset", interactive=True)
-                        load_dataset_subset = gr.Textbox(label="Dataset subset", interactive=True)
+                        load_dataset_subset = gr.Textbox(label="Dataset subset", placeholder="clean", interactive=True)
                         load_dataset_split = gr.Textbox(label="Dataset split", placeholder="train", interactive=True)
-                        load_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main")
-                        load_dataset_column = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio")
+                        load_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main", placeholder="main")
+                        load_dataset_column = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio", placeholder="audio")
                 
                 with gr.Column():
                     gr.Markdown("""## Output Options
@@ -168,16 +168,20 @@ with gr.Blocks() as iface:
 
                     with gr.Tab(label="Huggingface Dataset"):
                         save_dataset = gr.Textbox(label="Dataset path", placeholder="myuser/mydataset", interactive=True)
-                        save_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main")
+                        save_dataset_revision = gr.Textbox(label="Dataset revision / branch", interactive=True, value="main", placeholder="main")
                         #save_dataset_subset = gr.Textbox(label="Dataset subset", interactive=True)
                         save_dataset_split = gr.Textbox(label="Dataset split", placeholder="train", interactive=True)
                         save_dataset_private = gr.Checkbox(label="Private", interactive=True, value=True)
-                        save_dataset_column_audio = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio")
-                        save_dataset_column_text = gr.Textbox(label="Dataset column name for normal transcription", interactive=True, value="text")
-                        save_dataset_column_text_sbv = gr.Textbox(label="Dataset column name for timestamped transcription", 
-                                                                  interactive=True, value="sbv")
+                        save_dataset_column_audio = gr.Textbox(label="Dataset column name for audio", interactive=True, value="audio", placeholder="audio")
+                        save_dataset_column_text = gr.Textbox(label="Dataset column name for normal transcription", interactive=True, value="text", placeholder="text")
+                        save_dataset_column_text_sbv = gr.Textbox(label="Dataset column name for timestamped transcription",
+                                                                  info="Add Additional Timestamps must be active", 
+                                                                  interactive=True, value="sbv", placeholder="sbv")
                 
-            submit_button = gr.Button("Transcribe", variant="primary")
+            with gr.Row():
+                submit_button = gr.Button("Transcribe", variant="primary")
+                clear_button = gr.ClearButton(value="Clear all Input/Output Options", variant="secondary")
+            
             status = gr.Textbox(label="Status", interactive=False)
 
     with gr.Tab(label="Whisper Options"):
@@ -215,24 +219,28 @@ with gr.Blocks() as iface:
                             type="password",
                             interactive=True)
     
+    input_options = [
+        input_file, 
+        input_directory, 
+        input_youtube, 
+        load_dataset,
+        load_dataset_subset,
+        load_dataset_split,
+        load_dataset_revision,
+        load_dataset_column,
+        output_directory,
+        save_dataset,
+        save_dataset_revision,
+        save_dataset_split,
+        save_dataset_private,
+        save_dataset_column_audio,
+        save_dataset_column_text,
+        save_dataset_column_text_sbv
+    ]
+    
     submit_button.click(fn=handle_submit, 
         inputs=[
-            input_file, 
-            input_directory, 
-            input_youtube, 
-            load_dataset,
-            load_dataset_subset,
-            load_dataset_split,
-            load_dataset_revision,
-            load_dataset_column,
-            output_directory,
-            save_dataset,
-            save_dataset_revision,
-            save_dataset_split,
-            save_dataset_private,
-            save_dataset_column_audio,
-            save_dataset_column_text,
-            save_dataset_column_text_sbv,
+            *input_options,
             dtype_options, 
             checkpoint,
             batch_size,
@@ -241,6 +249,8 @@ with gr.Blocks() as iface:
             hf_token
             ], 
         outputs=[status])
+    
+    clear_button.add(input_options)
 
 # Launch the interface
 iface.queue().launch()
