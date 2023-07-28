@@ -188,16 +188,32 @@ class NeuraLumaWhisperPipeline:
             path_entries = [entry for entry in transcriptions if isinstance(entry["audio_entry"], str)]
             dict_entries = [entry for entry in transcriptions if isinstance(entry["audio_entry"], dict)]
 
-            dataset_with_audio_entry_paths = Dataset.from_dict({
+            dataset_with_audio_entry_paths_base_dict = {
                 audio_column_name: [entry["audio_entry"] for entry in path_entries],
                 text_column_name: [entry["transcription"]["text"] for entry in path_entries],
+            }
+
+            dataset_with_audio_entry_paths_sbv_dict = {
                 sbv_column_name: [self.get_timestamped_sbv_text(entry) for entry in path_entries],
+            } if add_timestamps else {}
+
+            dataset_with_audio_entry_paths = Dataset.from_dict({
+                **dataset_with_audio_entry_paths_base_dict,
+                **dataset_with_audio_entry_paths_sbv_dict
             }).cast_column(audio_column_name, Audio())
 
-            dataset_with_audio_entry_structs = Dataset.from_dict({
+            dataset_with_audio_entry_structs_base_dict = {
                 audio_column_name: [entry["audio_entry"] for entry in dict_entries],
                 text_column_name: [entry["transcription"]["text"] for entry in dict_entries],
+            }
+
+            dataset_with_audio_entry_structs_sbv_dict = {
                 sbv_column_name: [self.get_timestamped_sbv_text(entry) for entry in dict_entries],
+            } if add_timestamps else {}
+
+            dataset_with_audio_entry_structs = Dataset.from_dict({
+                **dataset_with_audio_entry_structs_base_dict,
+                **dataset_with_audio_entry_structs_sbv_dict
             }).cast_column(audio_column_name, Audio())
 
             hf_dataset = concatenate_datasets([dataset_with_audio_entry_paths, dataset_with_audio_entry_structs])
